@@ -1,4 +1,4 @@
-# NetHunter Kernel v4.3 — SM-A325 variants, SM-A225 variants, SM-E225F and SM-M225FV
+# NetHunter Kernel v4.4 — SM-A325 variants, SM-A225 variants, SM-E225F and SM-M225FV
 
 Custom NetHunter-ready kernel built for stability, performance tuning, and external adapter penetration testing.
 
