@@ -1741,7 +1741,7 @@ retry:
 	dentry = lookup_real(base->d_inode, dentry, flags);
 
 	if (unlikely(dentry) && !IS_ERR(dentry) && dentry->d_inode && !found_sus_path && susfs_is_inode_sus_path(dentry->d_inode)) {
-	        bool is_fuse = dentry->d_inode->i_sb->s_magic == FUSE_SUPER_MAGIC;
+	    bool is_fuse = dentry->d_inode->i_sb->s_magic == FUSE_SUPER_MAGIC;
 
 		if (d_in_lookup(dentry))
 			d_lookup_done(dentry);
