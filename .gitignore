@@ -1,2 +1,7 @@
 out/
 out_modules/
+tools/build/.fixdep-in.o.cmd
+tools/build/.fixdep.o.cmd
+tools/build/.fixdep.o.d
+tools/build/fixdep-in.o
+tools/build/fixdep.o
