@@ -2,6 +2,7 @@ name: Build NetHunter Kernel and save Artifacts
 
 on:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
