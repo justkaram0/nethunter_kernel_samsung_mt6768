@@ -1,12 +1,22 @@
 #!/bin/bash
 
-BOLDGREEN="\e[1;32m"
-BOLDRED="\e[1;31m"
-BOLDCYAN="\e[1;36m"
-BOLDBLUE="\e[1;94m"
-BOLDYELLOW="\e[1;33m"
-ENDCOLOR="\e[0m"
-VERSION=3
+if [ -t 1 ] && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
+    BOLDGREEN="\e[1;32m"
+	BOLDRED="\e[1;31m"
+	BOLDCYAN="\e[1;36m"
+	BOLDBLUE="\e[1;94m"
+	BOLDYELLOW="\e[1;33m"
+	ENDCOLOR="\e[0m"
+else
+    BOLDGREEN=""
+	BOLDRED=""
+	BOLDCYAN=""
+	BOLDBLUE=""
+	BOLDYELLOW=""
+	ENDCOLOR=""
+fi
+
+VERSION=3.1
 WIDTH=55
 
 REQUIRED_VALUES=(
@@ -177,7 +187,7 @@ function show_gui() {
 }
 
 function archiveBuild() {
-	buildTime=$(date +"%Y-%m-%d_%H-%M-%S")
+	local buildTime=$(date +"%Y-%m-%d_%H-%M-%S")
 	if [[ -d "$KDIR/$OUT_DIR/arch/$ARCH/boot" ]] then
 		mapfile -t images < <(find "$KDIR/$OUT_DIR/arch/$ARCH/boot" -type f)
 
@@ -305,6 +315,7 @@ function cleanKernel() {
 }
 
 function applyDefconfig() {
+	local config=$1
 	if [[ ! -d "$KDIR/arch/$ARCH/configs" ]] then
 		echo -e "$BOLDRED[-] Config dir for the arch '$ARCH' is not found!$ENDCOLOR"
 	else
@@ -315,30 +326,41 @@ function applyDefconfig() {
 			exit 1
 		fi
 
-		echo -e "$BOLDGREEN[+] Please choose a file by entering its number: $ENDCOLOR"
+		local SELECTED_FILE=""
+		
+		if [[ ! $config ]] then
+			echo -e "$BOLDGREEN[+] Please choose a file by entering its number: $ENDCOLOR"
 
-		for i in "${!files[@]}"; do
-			printf "  [${BOLDCYAN}%d$ENDCOLOR] $BOLDYELLOW%s$ENDCOLOR\n" "$((i + 1))" "${files[i]}"
-		done
+			for i in "${!files[@]}"; do
+				printf "  [${BOLDCYAN}%d$ENDCOLOR] $BOLDYELLOW%s$ENDCOLOR\n" "$((i + 1))" "${files[i]}"
+			done
 
-		echo -ne "${BOLDCYAN}Enter selection number: $ENDCOLOR"
-		read choice
+			echo -ne "${BOLDCYAN}Enter selection number: $ENDCOLOR"
+			read choice
 
-		index=$((choice - 1))
-		if [ "$index" -ge 0 ] && [ "$index" -lt "${#files[@]}" ]; then
-			SELECTED_FILE="${files[index]}"
-			echo -e "$BOLDCYAN[!] You selected: ${BOLDYELLOW}$SELECTED_FILE$ENDCOLOR"
-			
-			make -C "$KDIR" O="$OUT_DIR" $BUILDER_ENV $BUILDER_ENV_2 $SELECTED_FILE -j"$(nproc)"
-			ret=$?
-			if [ $ret -eq 0 ]; then
-				echo -e "$BOLDGREEN[+] Config Applying Succeed!$ENDCOLOR"
+			local index=$((choice - 1))
+			if [ "$index" -ge 0 ] && [ "$index" -lt "${#files[@]}" ]; then
+				SELECTED_FILE="${files[index]}"
+				echo -e "$BOLDCYAN[!] You selected: ${BOLDYELLOW}$SELECTED_FILE$ENDCOLOR"
 			else
-				echo -e "$BOLDRED[-] Config Applying Failed (exit code: $ret)$ENDCOLOR"
+				echo -e "$BOLDRED[-] Invalid selection.$ENDCOLOR"
+				return
 			fi
 		else
-			echo -e "$BOLDRED[-] Invalid selection.$ENDCOLOR"
-			return
+			if [[ ! -f "$KDIR/arch/$ARCH/configs/$config" ]] then
+				echo -e "$BOLDRED[-] Config '$config' not found!$ENDCOLOR"
+				return
+			fi
+			SELECTED_FILE=$config
+			echo -e "$BOLDCYAN[!] File selected: ${BOLDYELLOW}$SELECTED_FILE$ENDCOLOR"
+		fi
+
+		make -C "$KDIR" O="$OUT_DIR" $BUILDER_ENV $BUILDER_ENV_2 $SELECTED_FILE -j"$(nproc)"
+		ret=$?
+		if [ $ret -eq 0 ]; then
+			echo -e "$BOLDGREEN[+] Config Applying Succeed!$ENDCOLOR"
+		else
+			echo -e "$BOLDRED[-] Config Applying Failed (exit code: $ret)$ENDCOLOR"
 		fi
 	fi	
 }
@@ -387,54 +409,113 @@ function saveConfig() {
 	fi
 }
 
-while true; do
-	show_gui
-	echo -ne "${BOLDCYAN}Enter the action [0-8/E/G]: $ENDCOLOR"
-	read action
+function interactive() {
+    while true; do
+		show_gui
+		echo -ne "${BOLDCYAN}Enter the action [0-8/E/G]: $ENDCOLOR"
+		read action
 
-	case $action in
-		1)
-			cleanKernel
-			applyDefconfig
-			compileKernel
-			;;
-		2)
-			compileKernel
-			;;
-		3)
-			prepareModules
-			compileModules
-			;;
-		4)
-			prepareModules
-			;;
-		5)
-			copyModules
-			;;
-		6)
-			applyDefconfig
-			;;
-		7)
-			editConfig
-			;;
-		8)
-			saveConfig
-			;;
-		0)
-			cleanKernel
-			;;
-		E|e)
-			echo -e "$BOLDRED[!] Exiting!!$ENDCOLOR"
-			break
-			;;
-		G|g)
-			echo -e "$BOLDGREEN[+] Opening the creator's github page$ENDCOLOR"
-			xdg-open https://github.com/karamdev1 > /dev/null 2>&1 &
-			;;
-		*)
-			echo -e "$BOLDRED[!] Invalid Action!!$ENDCOLOR"
-			;;
-	esac
-	echo -ne "${BOLDYELLOW}Press enter to continue$ENDCOLOR"
-	read
-done
+		case $action in
+			1)
+				cleanKernel && applyDefconfig && compileKernel
+				;;
+			2)
+				compileKernel
+				;;
+			3)
+				prepareModules && compileModules
+				;;
+			4)
+				prepareModules
+				;;
+			5)
+				copyModules
+				;;
+			6)
+				applyDefconfig
+				;;
+			7)
+				editConfig
+				;;
+			8)
+				saveConfig
+				;;
+			0)
+				cleanKernel
+				;;
+			E|e)
+				echo -e "$BOLDRED[!] Exiting!!$ENDCOLOR"
+				break
+				;;
+			G|g)
+				echo -e "$BOLDGREEN[+] Opening the creator's github page$ENDCOLOR"
+				xdg-open https://github.com/karamdev1 > /dev/null 2>&1 &
+				;;
+			*)
+				echo -e "$BOLDRED[!] Invalid Action!!$ENDCOLOR"
+				;;
+		esac
+		echo -ne "${BOLDYELLOW}Press enter to continue$ENDCOLOR"
+		read
+	done
+}
+
+function showHelp() {
+    echo -e "${BOLDBLUE}Kernel Builder v$VERSION"
+    echo
+    echo -e "${BOLDCYAN}Usage: ${BOLDGREEN}./build.sh ${BOLDYELLOW}[command]"
+    echo
+    echo -e "${BOLDCYAN}Commands:"
+    echo -e "$BOLDBLUE  build               $BOLDYELLOW Compile kernel"
+    echo -e "$BOLDBLUE  modules             $BOLDYELLOW Prepare and compile modules"
+    echo -e "$BOLDBLUE  prepare             $BOLDYELLOW Prepare modules"
+	echo -e "$BOLDBLUE  copyModules         $BOLDYELLOW Copy modules"
+	echo -e "$BOLDBLUE  applyConfig $BOLDRED[file]  $BOLDYELLOW Apply a defconfig file"
+    echo -e "$BOLDBLUE  clean               $BOLDYELLOW Clean build environment"
+    echo -e "$BOLDBLUE  help                $BOLDYELLOW Show this help"
+    echo
+    echo -e "${BOLDYELLOW}No command starts the interactive menu.$ENDCOLOR"
+}
+
+case "${1:-interactive}" in
+    build)
+        compileKernel
+        exit $?
+        ;;
+    modules)
+        prepareModules && compileModules
+        exit $?
+        ;;
+    prepare)
+        prepareModules
+        exit $?
+        ;;
+	copyModules)
+		copyModules
+		exit $?
+        ;;
+	applyConfig)
+		if [[ ! $2 ]] then
+			echo -e "${BOLDRED}[-] Enter the defconfig's filename!$ENDCOLOR"
+			exit 1
+		fi
+		applyDefconfig $2
+        exit $?
+        ;;
+    clean)
+        cleanKernel
+        exit $?
+        ;;
+    help|--help|-h)
+        showHelp
+        exit 0
+        ;;
+    interactive)
+        interactive
+        ;;
+    *)
+        echo -e "${BOLDRED}Unknown command: $BOLDYELLOW$1$ENDCOLOR"
+        showHelp
+        exit 2
+        ;;
+esac
