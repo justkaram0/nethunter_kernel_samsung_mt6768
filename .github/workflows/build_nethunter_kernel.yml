@@ -1,0 +1,67 @@
+name: Build NetHunter Kernel and save Artifacts
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device:
+          - id: a22
+            defconfig: a22_nethunter_defconfig
+          - id: a32
+            defconfig: a32_nethunter_defconfig
+          - id: f22
+            defconfig: f22_nethunter_defconfig
+          - id: m32
+            defconfig: m32_nethunter_defconfig
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y \
+               git build-essential bc flex bison libssl-dev libelf-dev \
+               device-tree-compiler lz4 xz-utils zlib1g-dev libncurses-dev \
+               pahole python3 python-is-python3 openjdk-17-jdk rsync cpio kmod zstd
+
+      - name: Cache Toolchain
+        id: cache-toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/toolchains
+          key: zyc-clang-14-20260619-${{ runner.os }}-v1
+          restore-keys: |
+            zyc-clang-14-20260619-${{ runner.os }}-
+
+      - name: Clone Toolchain (If not cached)
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/toolchains
+          git clone --depth=1 https://github.com/karamdev1/zyc-clang-14-20260619.git ~/toolchains/zyc-clang-14-20260619
+
+      - name: Configure Kernel
+        run: ./build.sh applyConfig ${{ matrix.device.defconfig }}
+
+      - name: Compile Kernel
+        run: ./build.sh build
+
+      - name: Copy Compiled Images
+        run: |
+          mkdir -p final-images/${{ matrix.device.id }}
+          [ -f out/arch/arm64/boot/Image ] && cp out/arch/arm64/boot/Image final-images/${{ matrix.device.id }}/
+          [ -f out/arch/arm64/boot/Image.gz ] && cp out/arch/arm64/boot/Image.gz final-images/${{ matrix.device.id }}/
+          [ -f out/arch/arm64/boot/Image.gz-dtb ] && cp out/arch/arm64/boot/Image.gz-dtb final-images/${{ matrix.device.id }}/
+
+      - name: Upload Compiled Images Artifacts
+        run: |
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-images-${{ matrix.device.id }}
+          path: final-images/${{ matrix.device.id }}
