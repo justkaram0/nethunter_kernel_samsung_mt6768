@@ -60,7 +60,6 @@ jobs:
           [ -f out/arch/arm64/boot/Image.gz-dtb ] && cp out/arch/arm64/boot/Image.gz-dtb final-images/${{ matrix.device.id }}/
 
       - name: Upload Compiled Images Artifacts
-        run: |
         uses: actions/upload-artifact@v4
         with:
           name: kernel-images-${{ matrix.device.id }}
