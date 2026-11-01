@@ -1,3 +1,4 @@
+build/
 out/
 out_modules/
 tools/build/.fixdep-in.o.cmd
