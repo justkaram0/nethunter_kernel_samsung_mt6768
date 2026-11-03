@@ -7,10 +7,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_NODE24: true
     strategy:
       fail-fast: false
-      env:
-        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       matrix:
         device:
           - id: a22
