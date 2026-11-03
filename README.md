@@ -23,7 +23,7 @@ Not affiliated with Offensive Security or Kali NetHunter.
 
 ## Key Features
 
-* Integrated **BakaSU v4.2.0 (35226) + SuSFS v2.3.0** (Working & Tested)
+* Integrated **BakaSU + SuSFS v2.3.0** (Working & Tested)
 * SELinux **Permissive**
 * USB OTG Support
 * USB HID Support (Emulating Keyboard and Mouse)
