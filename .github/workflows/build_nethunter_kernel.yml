@@ -26,7 +26,10 @@ jobs:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Initialize and Fetch Submodules
+        run: git submodule update --init --recursive
 
       - name: Install Build Dependencies
         run: |
